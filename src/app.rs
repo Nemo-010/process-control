@@ -11,7 +11,7 @@ use eframe::egui;
 
 use crate::apps::{self, Applications, Row, SortKey, ViewMode};
 use crate::config::Config;
-use crate::platform::desktop::Index;
+use crate::desktop::Index;
 use crate::sample::{ProcessDetails, Sample, Signal};
 use crate::sampler::Sampler;
 use crate::theme::{self, Theme};

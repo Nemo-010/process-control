@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import { app } from '../../app'
 
-type Os = 'linux' | 'macos' | 'windows'
+type Os = 'linux'
 
 interface Asset {
   label: string
@@ -36,28 +36,14 @@ const platforms: Platform[] = [
       { label: 'aarch64', file: `${latest}-aarch64-linux.tar.xz`, note: 'archive' },
     ],
   },
-  {
-    os: 'macos',
-    label: 'macOS',
-    assets: [
-      { label: 'Apple silicon', file: `${latest}-aarch64-macos.dmg` },
-      { label: 'Intel', file: `${latest}-x86_64-macos.dmg` },
-    ],
-  },
-  {
-    os: 'windows',
-    label: 'Windows',
-    assets: [{ label: 'x86_64', file: `${latest}-x86_64-windows.exe` }],
-  },
 ]
 
 const detected = ref<Os | null>(null)
 
+// The app runs on Linux alone, so this only marks the visitor's own platform
+// when it is the one the app has.
 onMounted(() => {
-  const ua = navigator.userAgent
-  if (/Windows/.test(ua)) detected.value = 'windows'
-  else if (/Macintosh|Mac OS X/.test(ua)) detected.value = 'macos'
-  else if (/Linux|X11/.test(ua)) detected.value = 'linux'
+  if (/Linux|X11/.test(navigator.userAgent)) detected.value = 'linux'
 })
 
 const ordered = computed(() =>

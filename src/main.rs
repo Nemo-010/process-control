@@ -1,10 +1,9 @@
 //! A fast, light task manager.
 
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
 mod app;
 mod apps;
 mod config;
+mod desktop;
 mod error;
 mod fonts;
 mod format;

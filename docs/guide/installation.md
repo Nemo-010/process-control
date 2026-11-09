@@ -46,22 +46,10 @@ The `.tar.xz` archive holds the plain binary with its desktop entry and
 icons under `share/`. It uses the display libraries your system already
 has.
 
-Process Control reads the process table, which only Linux has. The macOS and
-Windows builds open the window and say that there is nothing to read there yet.
-On Linux it asks the X display which window belongs to which process, so on a
-Wayland session it sees the Xwayland windows, which is every X11 program and
-most of what a desktop runs.
-
-## macOS
-
-Open the disk image and drag **Process Control** to **Applications**. The app
-is not notarized, so the first launch needs a right click and **Open**.
-
-## Windows
-
-Run `process-control-x86_64-windows.exe`. It needs no installer and nothing
-else installed. Windows may warn that it is from an unknown publisher,
-since it is not signed: choose **More info**, then **Run anyway**.
+Process Control reads the process table, which only Linux has, and it builds
+for no other system. It asks the X display which window belongs to which
+process, so on a Wayland session it sees the Xwayland windows, which is every
+X11 program and most of what a desktop runs.
 
 ## From source
 

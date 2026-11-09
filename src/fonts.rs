@@ -223,22 +223,14 @@ const SCRIPTS: &[&[&str]] = &[
     TELUGU, KANNADA, MALAYALAM, SINHALA, KHMER, LAO, MYANMAR, ETHIOPIC, ARMENIAN, GEORGIAN,
 ];
 
-/// Font directories that XDG does not cover.
+/// A font directory XDG does not cover.
 ///
 /// Linux keeps its fonts under `XDG_DATA_HOME` and `XDG_DATA_DIRS`, which
-/// [`directories`] reads. macOS and Windows lay them out elsewhere, and the
-/// X11 directory is a leftover for a system with no XDG fonts at all.
-const DIRECTORIES: &[&str] = &[
-    "/usr/share/X11/fonts",
-    "/System/Library/Fonts",
-    "/Library/Fonts",
-    "C:\\Windows\\Fonts",
-];
+/// [`directories`] reads; the X11 directory is a leftover for a system that
+/// has no XDG fonts at all.
+const DIRECTORIES: &[&str] = &["/usr/share/X11/fonts"];
 
 /// Where XDG puts shared data when `XDG_DATA_DIRS` says nothing.
-///
-/// A list, not one joined string: [`std::env::split_paths`] reads a
-/// semicolon on Windows, where the variable is a Unix convention anyway.
 const DATA_DIRS: &[&str] = &["/usr/local/share", "/usr/share"];
 
 /// Extensions a font file can carry.
@@ -311,9 +303,6 @@ fn directories() -> Vec<PathBuf> {
         directories.push(directory.join("fonts"));
     }
     directories.extend(DIRECTORIES.iter().map(PathBuf::from));
-    if let Some(windows) = std::env::var_os("WINDIR") {
-        directories.push(PathBuf::from(windows).join("Fonts"));
-    }
     directories
 }
 

@@ -11,7 +11,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::platform::desktop::Entry;
+use crate::desktop::Entry;
 use crate::sample::{ProcessInfo, Sample, Window};
 
 /// One row of either view.
@@ -289,7 +289,7 @@ pub trait EntryLookup {
     fn matching(&self, classes: &[String], executable: Option<&str>) -> Option<&Entry>;
 }
 
-impl EntryLookup for crate::platform::desktop::Index {
+impl EntryLookup for crate::desktop::Index {
     fn matching(&self, classes: &[String], executable: Option<&str>) -> Option<&Entry> {
         self.matching(classes, executable)
     }

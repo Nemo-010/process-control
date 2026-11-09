@@ -50,10 +50,9 @@ never waits on it.
 
 ## Platforms
 
-Linux only, for now: it reads `/proc` and `/sys`, and asks the X display for
-the window each process owns. On a Wayland session it sees the Xwayland
-windows, which is every X11 program. The window builds and opens on macOS and
-Windows and says that it has nothing to read there yet.
+Linux only: it reads `/proc` and `/sys`, and asks the X display for the window
+each process owns. On a Wayland session it sees the Xwayland windows, which is
+every X11 program. It does not build for other systems.
 
 ## Install
 
@@ -65,8 +64,6 @@ Download the file for your platform from the
 | Linux, portable | `process-control-<arch>-linux.onelf` |
 | Linux, AppImage | `process-control-anylinux-<arch>.AppImage` |
 | Linux | `process-control-<arch>-linux.tar.xz` |
-| macOS | `process-control-<arch>-macos.dmg` |
-| Windows | `process-control-x86_64-windows.exe` |
 
 The `.onelf` file is a single executable that carries its own libraries.
 Make it executable and run it:

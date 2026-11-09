@@ -5,7 +5,6 @@
 //! display server knows about. [`Reader`] puts them together into one
 //! [`Sample`] and keeps the counters the next one measures its rates against.
 
-pub mod desktop;
 pub mod gpu;
 pub mod net;
 pub mod process;

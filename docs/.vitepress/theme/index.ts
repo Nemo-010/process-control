@@ -1,7 +1,7 @@
 import type { Theme } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 
-import '@fontsource-variable/figtree'
+import '@fontsource-variable/inter'
 import '@fontsource-variable/jetbrains-mono'
 import './style.css'
 

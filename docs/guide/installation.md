@@ -11,20 +11,20 @@ graphics drivers included, so it runs on any distribution, musl ones
 like Alpine too:
 
 ```sh
-chmod +x app-template-x86_64-linux.onelf
-./app-template-x86_64-linux.onelf
+chmod +x process-control-x86_64-linux.onelf
+./process-control-x86_64-linux.onelf
 ```
 
 Add it to your application menu with:
 
 ```sh
-./app-template-x86_64-linux.onelf --onelf-integrate
+./process-control-x86_64-linux.onelf --onelf-integrate
 ```
 
 Update it in place, downloading only what changed since your copy:
 
 ```sh
-./app-template-x86_64-linux.onelf --onelf-update
+./process-control-x86_64-linux.onelf --onelf-update
 ```
 
 <!-- AppImage: keep this part only when Cargo.toml sets appimage = true
@@ -37,8 +37,8 @@ for AppImage managers such as [AM](https://github.com/ivan-hc/AM) or
 updates itself:
 
 ```sh
-chmod +x app-template-anylinux-x86_64.AppImage
-./app-template-anylinux-x86_64.AppImage
+chmod +x process-control-anylinux-x86_64.AppImage
+./process-control-anylinux-x86_64.AppImage
 ```
 <!-- /AppImage -->
 
@@ -46,19 +46,25 @@ The `.tar.xz` archive holds the plain binary with its desktop entry and
 icons under `share/`. It uses the display libraries your system already
 has.
 
+Process Control reads the process table, which only Linux has. The macOS and
+Windows builds open the window and say that there is nothing to read there yet.
+On Linux it asks the X display which window belongs to which process, so on a
+Wayland session it sees the Xwayland windows, which is every X11 program and
+most of what a desktop runs.
+
 ## macOS
 
-Open the disk image and drag **App Template** to **Applications**. The app
+Open the disk image and drag **Process Control** to **Applications**. The app
 is not notarized, so the first launch needs a right click and **Open**.
 
 ## Windows
 
-Run `app-template-x86_64-windows.exe`. It needs no installer and nothing
+Run `process-control-x86_64-windows.exe`. It needs no installer and nothing
 else installed. Windows may warn that it is from an unknown publisher,
 since it is not signed: choose **More info**, then **Run anyway**.
 
 ## From source
 
 ```sh
-cargo install --locked --git https://github.com/pkgforge-apps/app-template
+cargo install --locked --git https://github.com/pkgforge-apps/process-control
 ```

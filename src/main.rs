@@ -1,8 +1,21 @@
-//! A lightweight native desktop app built with egui.
+//! A fast, light task manager.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app;
+mod apps;
+mod config;
+mod error;
+mod fonts;
+mod format;
+mod icons;
+mod platform;
+#[cfg(test)]
+mod preview;
+mod sample;
+mod sampler;
+mod theme;
+mod ui;
 
 use app::App;
 use eframe::egui;
@@ -18,14 +31,17 @@ fn main() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_title(App::TITLE)
             .with_app_id(App::ID)
-            .with_inner_size([960.0, 640.0])
-            .with_min_inner_size([480.0, 320.0])
+            .with_inner_size(app::DEFAULT_WINDOW_SIZE)
+            .with_min_inner_size(app::MIN_WINDOW_SIZE)
             .with_icon(icon),
         ..Default::default()
     };
     eframe::run_native(
         App::TITLE,
         options,
-        Box::new(move |_cc| Ok(Box::new(App::new(smoke)))),
+        Box::new(move |cc| {
+            fonts::install(&cc.egui_ctx);
+            Ok(Box::new(App::new(&cc.egui_ctx, smoke)))
+        }),
     )
 }

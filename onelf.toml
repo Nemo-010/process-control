@@ -2,13 +2,13 @@
 # copies it into the AppDir and writes the release version over the
 # placeholder below.
 [package]
-name = "app-template"
-command = "bin/app-template"
-output = "app-template.onelf"
+name = "process-control"
+command = "bin/process-control"
+output = "process-control.onelf"
 version = "0.0.0"
-description = "A lightweight native desktop app built with egui"
+description = "A fast, light task manager"
 license = "MIT"
-homepage = "https://github.com/pkgforge-apps/app-template"
+homepage = "https://github.com/pkgforge-apps/process-control"
 
 [compression]
 level = 22

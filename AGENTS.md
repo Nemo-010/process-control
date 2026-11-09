@@ -300,7 +300,91 @@ shared skill of the same name.
 
 ## This app
 
-What App Template is and does, and anything about it the shared
-guidelines above do not cover: its own modules, platform limits, file
-formats, services it talks to. Keep it short. A rule that would help
-every app belongs in the shared guidelines instead.
+Process Control is a task manager: it shows the machine's processes and the
+applications they belong to, with live graphs, and sends signals to them. It is
+an alternative to Mission Center, GNOME's System Monitor and the other GTK task
+managers, and it exists because those are slow to open and freeze under load,
+which is exactly when a task manager is opened.
+
+Linux only, and it builds for no other system: `src/platform/mod.rs` fails the
+build elsewhere with a message that says why, rather than carrying a stub of a
+window that could show nothing. Adding a platform means a second reader behind
+that module, not a change to the app. The shared guidelines' rule about all
+three platforms and the shared CI and release matrices that enforce it do not
+fit an app like this; see the "One OS only" note below.
+
+### Layout, as this app actually is
+
+The shape above is the organization's; this app has no `build.rs`, no
+`assets/icon.ico` and no `packaging/macos`, since nothing here builds for
+Windows or macOS. `src/desktop.rs` is the app's own, and `src/platform/linux/`
+holds the readers.
+
+### Reading the system
+
+- Everything in `src/platform/linux/` is a read of `/proc` or `/sys`, and none
+  of it may run on the drawing thread. `src/sampler.rs` owns the thread that
+  reads at the configured interval and sends each `Sample` over a channel;
+  `src/platform/linux/mod.rs`'s `Reader` is what turns two reads into rates.
+  The `Sample` is a value: drawing never waits on the system.
+- `process.rs` reads `/proc/<pid>`, `system.rs` the machine-wide counters,
+  `net.rs` the TCP byte counters (`NETLINK_SOCK_DIAG`, matched to a process by
+  the socket inodes in its `fd` directory), `gpu.rs` the kernel's DRM engine
+  accounting, and `windows.rs` the windows on the X display.
+- The per-process network column only counts TCP. A program that streams over
+  UDP shows nothing there, because the kernel keeps no byte counter for it.
+
+### Applications
+
+`src/apps.rs` turns a `Sample` into the rows. A process belongs to an
+application when it, or an ancestor, owns a window: `_NET_WM_PID` says which
+process owns it and `WM_CLASS` says which program it is. `src/desktop.rs`
+indexes the desktop entries and matches `StartupWMClass` against
+both strings of `WM_CLASS`, so an application is recognised whatever packaged
+it. Nothing here consults Flatpak, Snap or systemd, and it must stay that way:
+those do not exist on a great many systems.
+
+`src/desktop.rs` is at the crate root rather than behind the platform module
+because it is plain XDG file parsing: it reads the same `.desktop` files for any
+app, and nothing in it is a Linux syscall.
+
+`src/icons.rs` finds and decodes the icons the entries name, off the drawing
+thread. Adding a dependency that reads a new image format belongs there.
+
+### One OS only
+
+The shared guidelines ask every app to build on Linux, macOS and Windows. This
+one cannot: a task manager is a reader of the process table, and this reads
+Linux's. Two shared pieces assume the three platforms and are **not** edited
+here, because a sync overwrites them:
+
+- `.github/workflows/ci.yml` runs the shared `app-ci`, whose `test` job has a
+  hardcoded `[ubuntu-latest, macos-latest, windows-latest]` matrix. Those two
+  jobs fail on a target that does not build.
+- `.github/workflows/release.yml` runs the shared `app-release`, whose `build`
+  matrix is hardcoded to the five Linux, macOS and Windows targets.
+
+Both need a `platforms` input upstream in pkgforge-apps/.github, or a
+Linux-only variant, before this app's CI and releases go green. Do not paper
+over it by adding a stub platform back.
+
+### Things to know
+
+- The window has two views of one sample: applications, and the process tree.
+  An application's subtree starts folded, which is why `Row::has_children`
+  exists: a folded row draws no children, so the arrow could not be worked out
+  from the rows alone.
+- `--smoke` must keep working, on every platform. CI launches it under Xvfb to
+  prove a build opens a window and draws.
+- `src/preview.rs` draws one frame into a PNG with tiny-skia, so a change can
+  be looked at on a machine with no display server. It is `#[cfg(test)]` only,
+  and the docs' screenshots come from it: run
+  `cargo test write_the_screenshots -- --ignored`.
+
+### Testing
+
+The platform modules have tests that read the live system, so they are skipped
+nowhere and skipped by nothing: they assert what is true of any machine the app
+runs on (that the process table holds the test itself, that the CPU counters
+moved at some point) rather than exact numbers. `src/ui.rs` draws through
+`egui_kittest`, which needs no display.

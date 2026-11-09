@@ -2,34 +2,75 @@
   <img src="assets/icon.svg" width="128" alt="">
 </p>
 
-<h1 align="center">App Template</h1>
+<h1 align="center">Process Control</h1>
 
-<p align="center">A lightweight native desktop app built with egui</p>
+<p align="center">A fast, light task manager with applications, not just processes</p>
 
 <p align="center">
-  <a href="https://pkgforge-apps.github.io/app-template/">Documentation</a> |
-  <a href="https://github.com/pkgforge-apps/app-template/releases/latest">Latest release</a>
+  <a href="https://pkgforge-apps.github.io/process-control/">Documentation</a> |
+  <a href="https://github.com/pkgforge-apps/process-control/releases/latest">Latest release</a>
 </p>
+
+Process Control shows what your machine is doing right now and lets you act on
+it. It reads the process table itself, groups processes into the applications
+that own the windows, and starts at once. There is no helper daemon, no
+runtime to install, and nothing to configure before the window is useful.
+
+It is an alternative to Mission Center, GNOME's System Monitor and the other
+GTK task managers, which take a moment to open and can freeze under load. A
+task manager is opened exactly when the machine is busy, so being quick and
+staying responsive is the whole point: this is one native Rust binary drawn
+with egui, and the process table is read on a thread of its own, so the window
+never waits on it.
+
+## Features
+
+- **Applications, not just processes.** Each program that has a window is
+  shown under its own name and icon, with its helper processes folded away
+  beneath it. The window class and the process that owns the window are read
+  from the display server, then matched against the desktop entries, so this
+  works for any packaging format: Flatpak, Snap, `.deb`, or a binary in your
+  home directory. Nothing here depends on Flatpak, Snap or systemd.
+- **A process tree.** Every process under its parent, with an application's
+  tree folded away until you ask for it. Kernel threads stay out of the way
+  unless you turn them on.
+- **The numbers, per process and for the machine.** CPU per core and in
+  total, memory and swap, GPU usage, network and storage traffic, all with a
+  history graph across the top of the window and a column per row.
+  CPU and storage come from `/proc`, the GPU from the kernel's own DRM
+  accounting, and the per-process network figures from the sockets each
+  process holds.
+- **Act on a process.** Terminate it (SIGTERM), force stop it (SIGKILL, with
+  a question first), send any signal from the menu, or open its details:
+  command line, executable, working directory, user, memory, I/O, open files,
+  OOM score and window class.
+- **Built to stay light.** The table draws only the rows that are on screen,
+  the icons are decoded off the drawing thread, and the window repaints only
+  when a sample arrives or you touch it.
+
+## Platforms
+
+Linux only: it reads `/proc` and `/sys`, and asks the X display for the window
+each process owns. On a Wayland session it sees the Xwayland windows, which is
+every X11 program. It does not build for other systems.
 
 ## Install
 
 Download the file for your platform from the
-[latest release](https://github.com/pkgforge-apps/app-template/releases/latest).
+[latest release](https://github.com/pkgforge-apps/process-control/releases/latest).
 
 | Platform | File |
 |----------|------|
-| Linux, portable | `app-template-<arch>-linux.onelf` |
-| Linux, AppImage | `app-template-anylinux-<arch>.AppImage` |
-| Linux | `app-template-<arch>-linux.tar.xz` |
-| macOS | `app-template-<arch>-macos.dmg` |
-| Windows | `app-template-x86_64-windows.exe` |
+| Linux, portable | `process-control-<arch>-linux.onelf` |
+| Linux, AppImage | `process-control-anylinux-<arch>.AppImage` |
+| Linux | `process-control-<arch>-linux.tar.xz` |
 
 The `.onelf` file is a single executable that carries its own libraries.
 Make it executable and run it:
 
 ```sh
-chmod +x app-template-x86_64-linux.onelf
-./app-template-x86_64-linux.onelf
+chmod +x process-control-x86_64-linux.onelf
+./process-control-x86_64-linux.onelf
 ```
 
 Run it once with `--onelf-integrate` to add it to your application menu,
@@ -45,8 +86,8 @@ for AppImage managers such as [AM](https://github.com/ivan-hc/AM) or
 updates itself:
 
 ```sh
-chmod +x app-template-anylinux-x86_64.AppImage
-./app-template-anylinux-x86_64.AppImage
+chmod +x process-control-anylinux-x86_64.AppImage
+./process-control-anylinux-x86_64.AppImage
 ```
 <!-- /AppImage -->
 
@@ -54,7 +95,7 @@ chmod +x app-template-anylinux-x86_64.AppImage
 
 ```sh
 cargo build --release --locked
-./target/release/app-template
+./target/release/process-control
 ```
 
 ## License

@@ -1,0 +1,34 @@
+[package]
+name = "app-template"
+version = "0.1.0"
+edition = "2024"
+description = "A lightweight native desktop app built with egui"
+license = "MIT"
+repository = "https://github.com/pkgforge-apps/app-template"
+homepage = "https://pkgforge-apps.github.io/app-template/"
+readme = "README.md"
+publish = false
+exclude = ["/docs", "/scripts", "/.github", "/.agents", "/.claude"]
+
+# Read by the shared release workflow. `appimage = true` ships an Anylinux
+# AppImage beside the onelf bundle; see the anylinux-appimage skill.
+[package.metadata.pkgforge]
+appimage = false
+
+[dependencies]
+eframe = { version = "0.37.0", default-features = false, features = ["accesskit", "clipboard", "default_fonts", "glow", "links", "wayland", "x11"] }
+
+[build-dependencies]
+winresource = "0.1.34"
+
+[lints.rust]
+missing_docs = "warn"
+
+[lints.clippy]
+missing_docs_in_private_items = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = true

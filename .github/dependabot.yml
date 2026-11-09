@@ -1,0 +1,24 @@
+# The workflows are synced from pkgforge-apps/.github, whose own
+# Dependabot keeps their actions current.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      cargo:
+        patterns: ["*"]
+  - package-ecosystem: bun
+    directory: /docs
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      docs:
+        patterns: ["*"]

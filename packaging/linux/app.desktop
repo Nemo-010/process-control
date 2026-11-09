@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=App Template
+Comment=A lightweight native desktop app built with egui
+Exec=app-template
+Icon=app-template
+Terminal=false
+Categories=Utility;
+StartupWMClass=app-template

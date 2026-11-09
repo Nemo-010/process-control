@@ -1,0 +1,39 @@
+name: release
+
+# Copied from pkgforge-apps/.github by scripts/sync-guidelines.sh, which
+# also pins the shared workflow below to the revision it synced from.
+# release-plz starts this with the tag it created. Run it by hand to
+# rebuild the assets of a release that is still a draft.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the release to build, such as v0.1.0
+        required: true
+        type: string
+      onelf-version:
+        description: onelf release to pack the Linux bundles with; empty for the pinned one
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  release:
+    uses: pkgforge-apps/.github/.github/workflows/app-release.yml@fd35ab380b69efcfb26b8c37e6196dbe5d5d9d38
+    with:
+      tag: ${{ inputs.tag }}
+      onelf-version: ${{ inputs.onelf-version }}
+    # Exists only in the app's `release` environment, which main alone may
+    # use; the onelf job signs self-updates with it.
+    secrets:
+      ONELF_SIGNING_KEY: ${{ secrets.ONELF_SIGNING_KEY }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write

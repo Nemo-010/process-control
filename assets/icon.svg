@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b4cf0"/>
+      <stop offset="1" stop-color="#1fb6e8"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#5b4cf0"/>
+      <stop offset="1" stop-color="#1fb6e8"/>
+    </linearGradient>
+  </defs>
+  <rect x="80" y="80" width="864" height="864" rx="196" fill="url(#tile)"/>
+  <rect x="80" y="80" width="864" height="864" rx="196" fill="url(#sheen)"/>
+  <rect x="216" y="252" width="592" height="520" rx="76" fill="#0b1030" fill-opacity="0.18" transform="translate(0 18)"/>
+  <rect x="216" y="252" width="592" height="520" rx="76" fill="#ffffff"/>
+  <path d="M216 328a76 76 0 0 1 76-76h440a76 76 0 0 1 76 76v28H216z" fill="#e8ecfb"/>
+  <circle cx="300" cy="306" r="20" fill="#5b4cf0"/>
+  <circle cx="362" cy="306" r="20" fill="#8a7ff5"/>
+  <circle cx="424" cy="306" r="20" fill="#b9b2f9"/>
+  <path d="M372 700c-6-150 96-262 286-288-2 172-104 278-286 288z" fill="url(#leaf)"/>
+  <path d="M372 700c70-96 150-170 236-228" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round"/>
+</svg>

@@ -68,6 +68,15 @@ impl ProcessInfo {
             .unwrap_or("")
     }
 
+    /// The executable's file name, which is how a desktop entry is matched to
+    /// a process on a session that does not say which window it belongs to.
+    pub fn executable_name(&self) -> Option<&str> {
+        self.exe
+            .as_deref()
+            .and_then(|path| path.rsplit('/').next())
+            .filter(|name| !name.is_empty())
+    }
+
     /// How long the process has been running, from its start if it has one.
     pub fn uptime(&self) -> Option<u64> {
         self.started

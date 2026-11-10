@@ -47,9 +47,13 @@ icons under `share/`. It uses the display libraries your system already
 has.
 
 Process Control reads the process table, which only Linux has, and it builds
-for no other system. It asks the X display which window belongs to which
-process, so on a Wayland session it sees the Xwayland windows, which is every
-X11 program and most of what a desktop runs.
+for no other system.
+
+On X11 it asks the display which window belongs to which process, which is how
+a row is tied to the program that owns it. A Wayland compositor does not
+publish that to other programs, so on a Wayland session the applications are
+recognised by the program each process runs instead: the same names and the
+same icons, without the window class.
 
 ## From source
 

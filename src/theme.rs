@@ -399,6 +399,16 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
     ]
     .into();
 
+    // Which of the two styles is in use is a separate setting from the styles
+    // themselves, and it defaults to following the system. Writing both styles
+    // without pinning the choice leaves a light desktop rendering the light
+    // style's colours over the dark palette, which is what made the menu
+    // unreadable on a light session whatever theme was picked.
+    ctx.set_theme(if light {
+        egui::ThemePreference::Light
+    } else {
+        egui::ThemePreference::Dark
+    });
     ctx.set_style_of(egui::Theme::Dark, style.clone());
     ctx.set_style_of(egui::Theme::Light, style);
 }
@@ -431,6 +441,43 @@ mod tests {
         for theme in [Theme::Default, Theme::AdwaitaDark, Theme::BreezeDark] {
             assert!(!theme.palette().light, "{} is dark", theme.name());
         }
+    }
+
+    #[test]
+    fn a_light_theme_pins_the_light_preference() {
+        // egui has two styles and a separate setting for which is in use, and
+        // that setting defaults to following the system. Writing the styles
+        // without pinning the choice left a light desktop drawing the light
+        // style's colours over the dark palette, which is what made the menus
+        // unreadable whatever theme was picked.
+        let ctx = egui::Context::default();
+        apply(&ctx, Theme::AdwaitaLight);
+        assert_eq!(
+            ctx.options(|options| options.theme_preference),
+            egui::ThemePreference::Light
+        );
+        apply(&ctx, Theme::Default);
+        assert_eq!(
+            ctx.options(|options| options.theme_preference),
+            egui::ThemePreference::Dark
+        );
+    }
+
+    #[test]
+    fn the_active_style_is_the_palette_that_was_asked_for() {
+        let ctx = egui::Context::default();
+        apply(&ctx, Theme::AdwaitaLight);
+        let style = ctx.style_of(egui::Theme::Light);
+        let palette = Theme::AdwaitaLight.palette();
+        assert_eq!(
+            style.visuals.panel_fill,
+            Color32::from_rgb(
+                palette.background.0,
+                palette.background.1,
+                palette.background.2
+            ),
+            "the panel fill is the palette's background, not egui's own"
+        );
     }
 
     #[test]

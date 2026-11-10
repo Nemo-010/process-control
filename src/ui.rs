@@ -13,6 +13,35 @@ use crate::format;
 use crate::sample::Signal;
 use crate::theme::{self, Theme};
 
+/// The colours the window is drawing with.
+///
+/// They are read from the style in use rather than from the theme the app
+/// remembers, so what a row paints cannot disagree with what egui drew around
+/// it. A theme switch writes the style and the remembered theme together, but
+/// only one of them is what the frame is actually rendered with.
+fn palette(ui: &egui::Ui) -> theme::Palette {
+    use egui::Visuals;
+    let visuals: &Visuals = ui.visuals();
+    let rgb = |color: Color32| {
+        let [r, g, b, _] = color.to_srgba_unmultiplied();
+        (r, g, b)
+    };
+    theme::Palette {
+        background: rgb(visuals.panel_fill),
+        panel: rgb(visuals.window_fill),
+        recess: rgb(visuals.extreme_bg_color),
+        placeholder: rgb(visuals.faint_bg_color),
+        widget: rgb(visuals.widgets.inactive.bg_fill),
+        hovered: rgb(visuals.widgets.hovered.bg_fill),
+        active: rgb(visuals.widgets.active.bg_fill),
+        border: rgb(visuals.window_stroke.color),
+        text: visuals.text_color(),
+        weak_text: visuals.weak_text_color(),
+        accent: visuals.hyperlink_color,
+        light: !visuals.dark_mode,
+    }
+}
+
 /// Height of one row of the process table, in points.
 const ROW_HEIGHT: f32 = 22.0;
 
@@ -224,8 +253,11 @@ pub fn draw(app: &mut App, ui: &mut egui::Ui) {
             .show(ui, |ui| details_panel(app, ui));
     }
 
+    // The frame carries the window's own colour: a frame with no fill leaves
+    // the table drawing over whatever the renderer cleared to, which is a dark
+    // grey, and the light themes then showed a dark column of rows.
     egui::CentralPanel::default()
-        .frame(egui::Frame::NONE)
+        .frame(egui::Frame::NONE.fill(ui.visuals().panel_fill))
         .show(ui, |ui| table(app, ui));
 
     confirmation(app, &ctx);
@@ -499,23 +531,36 @@ fn card(
         FontId::proportional(9.5),
         visuals.weak_text_color(),
     );
+
+    // The reading and the line under it are separate rows, and neither may
+    // run past the card: a long reading used to be drawn from the left while
+    // the detail was drawn from the right, on the same line, so they ran into
+    // each other. Each is clipped to the card instead.
+    let value_rect = Rect::from_min_max(
+        egui::pos2(inner.left(), inner.top() + 12.0),
+        egui::pos2(inner.right(), inner.top() + 32.0),
+    );
     painter.text(
-        inner.left_top() + vec2(0.0, 12.0),
-        Align2::LEFT_TOP,
-        &value,
+        value_rect.left_center(),
+        Align2::LEFT_CENTER,
+        truncate(ui, &value, 19.0, value_rect.width()),
         FontId::proportional(19.0),
         visuals.strong_text_color(),
     );
+    let detail_rect = Rect::from_min_max(
+        egui::pos2(inner.left(), inner.top() + 33.0),
+        egui::pos2(inner.right(), inner.top() + 45.0),
+    );
     painter.text(
-        inner.right_top() + vec2(0.0, 14.0),
-        Align2::RIGHT_TOP,
-        &detail,
+        detail_rect.left_center(),
+        Align2::LEFT_CENTER,
+        truncate(ui, &detail, 10.0, detail_rect.width()),
         FontId::proportional(10.0),
         visuals.weak_text_color(),
     );
 
     let plot = Rect::from_min_max(
-        egui::pos2(inner.left(), inner.top() + 38.0),
+        egui::pos2(inner.left(), inner.top() + 48.0),
         egui::pos2(inner.right(), rect.bottom() - 6.0),
     );
     graph(&painter, plot, history.first, history.ceiling, color);
@@ -528,7 +573,36 @@ fn card(
             color.gamma_multiply(0.55),
         );
     }
-    response.on_hover_text(title);
+    response.on_hover_text(format!("{title}\n{value}\n{detail}"));
+}
+
+/// `text` cut to what fits in `width` at `size`, with an ellipsis when it does
+/// not, so a long reading is shortened rather than drawn over its neighbour.
+fn truncate(ui: &egui::Ui, text: &str, size: f32, width: f32) -> String {
+    let font = FontId::proportional(size);
+    let fits = |candidate: &str| {
+        ui.fonts_mut(|fonts| {
+            fonts
+                .layout_no_wrap(candidate.to_string(), font.clone(), Color32::WHITE)
+                .size()
+                .x
+        }) <= width
+    };
+    if fits(text) {
+        return text.to_string();
+    }
+    let mut cut: String = String::new();
+    for letter in text.chars() {
+        let mut candidate = cut.clone();
+        candidate.push(letter);
+        candidate.push('\u{2026}');
+        if !fits(&candidate) {
+            break;
+        }
+        cut.push(letter);
+    }
+    cut.push('\u{2026}');
+    cut
 }
 
 /// Draws one history as a filled line across `plot`.
@@ -566,7 +640,7 @@ fn graph(painter: &egui::Painter, plot: Rect, history: &[f32], ceiling: f32, col
 /// The CPU graph, with the busiest core's share beside the total.
 fn cpu_card(app: &App, ui: &mut egui::Ui, width: f32) {
     let sample = &app.sample;
-    let palette = app.palette(ui);
+    let palette = palette(ui);
     let busiest = sample.cores.iter().copied().fold(0.0_f32, f32::max);
     card(
         ui,
@@ -586,7 +660,7 @@ fn cpu_card(app: &App, ui: &mut egui::Ui, width: f32) {
 /// The memory graph, with the swap beside the total.
 fn memory_card(app: &App, ui: &mut egui::Ui, width: f32) {
     let sample = &app.sample;
-    let palette = app.palette(ui);
+    let palette = palette(ui);
     let detail = if sample.swap_total > 0 {
         format!(
             "{} of {}, swap {}",
@@ -623,7 +697,7 @@ fn memory_card(app: &App, ui: &mut egui::Ui, width: f32) {
 /// The GPU graph, which says so when the machine reports no GPU.
 fn gpu_card(app: &App, ui: &mut egui::Ui, width: f32) {
     let sample = &app.sample;
-    let palette = app.palette(ui);
+    let palette = palette(ui);
     match sample.gpu {
         Some(busy) => card(
             ui,
@@ -657,7 +731,7 @@ fn gpu_card(app: &App, ui: &mut egui::Ui, width: f32) {
 /// The network graph, receiving over sending.
 fn network_card(app: &App, ui: &mut egui::Ui, width: f32) {
     let sample = &app.sample;
-    let palette = app.palette(ui);
+    let palette = palette(ui);
     let ceiling = app.scales.net.max(1.0);
     card(
         ui,
@@ -681,7 +755,7 @@ fn network_card(app: &App, ui: &mut egui::Ui, width: f32) {
 /// The storage graph, reading over writing.
 fn disk_card(app: &App, ui: &mut egui::Ui, width: f32) {
     let sample = &app.sample;
-    let palette = app.palette(ui);
+    let palette = palette(ui);
     let ceiling = app.scales.disk.max(1.0);
     card(
         ui,
@@ -811,7 +885,7 @@ fn table_with(app: &mut App, ui: &mut egui::Ui, visible: &[usize], columns: &[Co
 /// Draws the column titles, which a click sorts by.
 fn column_titles(app: &mut App, ui: &mut egui::Ui, header: Rect, places: &[(Column, Rect)]) {
     let painter = ui.painter_at(header);
-    let palette = app.palette(ui);
+    let palette = palette(ui);
     painter.rect_filled(header, 0.0, ui.visuals().faint_bg_color);
     let mut sort_click: Option<SortKey> = None;
     for (column, place) in places {
@@ -879,7 +953,7 @@ fn row(
         .pids
         .first()
         .is_some_and(|pid| app.selection.contains(pid));
-    let palette = app.palette(ui);
+    let palette = palette(ui);
     let painter = ui.painter_at(rect);
 
     if selected {
@@ -1503,6 +1577,30 @@ mod tests {
             .find(|row| row.name == "shell")
             .expect("the shell is a row");
         assert_eq!(shell.depth, 1, "the shell sits under init in the tree");
+    }
+
+    #[test]
+    fn a_reading_longer_than_its_card_is_cut_rather_than_drawn_over_its_detail() {
+        // The memory card draws a reading and a detail line under it; a long
+        // reading used to run under the detail, which is what made the two
+        // overlap. A reading that does not fit is shortened with an ellipsis.
+        let mut harness = Harness::builder()
+            .with_size(egui::vec2(1_040.0, 660.0))
+            .build_ui_state(
+                |ui, out: &mut (String, String)| {
+                    out.0 = truncate(ui, "4.16 GiB / 5.62 GiB", 19.0, 60.0);
+                    out.1 = truncate(ui, "12.3%", 10.0, 400.0);
+                },
+                (String::new(), String::new()),
+            );
+        harness.run();
+        let (cut, fitted) = harness.state().clone();
+        assert!(
+            cut.ends_with('\u{2026}'),
+            "a long reading is elided: {cut:?}"
+        );
+        assert!(cut.chars().count() < "4.16 GiB / 5.62 GiB".chars().count());
+        assert_eq!(fitted, "12.3%", "a reading that fits is left alone");
     }
 
     #[test]

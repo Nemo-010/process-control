@@ -709,11 +709,6 @@ impl App {
         }
     }
 
-    /// The colours the window is drawing with.
-    pub fn palette(&self, _ui: &egui::Ui) -> theme::Palette {
-        self.theme.palette()
-    }
-
     /// How many processes the machine has, of which how many are running.
     pub fn process_summary(&self) -> String {
         format!(
@@ -748,6 +743,21 @@ fn push(history: &mut Vec<f32>, value: f32) {
 }
 
 impl eframe::App for App {
+    /// The colour the renderer clears to, which shows wherever no panel
+    /// covers it.
+    ///
+    /// eframe's own default is a dark grey, so a light theme drew its window
+    /// over a dark border; this follows the chosen palette.
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        let palette = self.theme.palette();
+        egui::Color32::from_rgb(
+            palette.background.0,
+            palette.background.1,
+            palette.background.2,
+        )
+        .to_normalized_gamma_f32()
+    }
+
     /// Called before every frame, and on its own while the window is hidden:
     /// the sample that arrived is taken here, so a window that is brought
     /// back shows the machine as it is now rather than as it was.
@@ -844,6 +854,9 @@ mod tests {
     #[test]
     fn folding_a_row_hides_its_children() {
         let mut app = app();
+        // The tree view is the one that nests, so folding is tested there.
+        app.view = ViewMode::Tree;
+        app.rebuild();
         let before = app.rows.len();
         app.toggle_fold(2);
         app.rebuild();

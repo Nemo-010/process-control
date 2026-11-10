@@ -196,6 +196,30 @@ impl Applications {
             membership: HashMap::new(),
             windows: HashMap::new(),
         };
+        // A session with no window information at all is a Wayland one: the
+        // compositor does not publish which process owns a window to anybody
+        // but itself. Without a fallback every row would be named after its
+        // executable and drawn with a placeholder, so a program is recognised
+        // by the program it runs instead. That is enough for the name and the
+        // icon, and it is what makes the view still read as applications.
+        if windows.is_empty() {
+            for process in &sample.processes {
+                let Some(executable) = process.executable_name() else {
+                    continue;
+                };
+                let Some(entry) = entries.by_exec_name(executable) else {
+                    continue;
+                };
+                if entry.name.is_empty() {
+                    continue;
+                }
+                let icon = (!entry.icon.is_empty()).then(|| entry.icon.clone());
+                applications
+                    .owners
+                    .entry(process.pid)
+                    .or_insert((entry.name.clone(), icon));
+            }
+        }
         let by_pid: HashMap<i32, usize> = sample.index();
         for window in windows {
             if window.pid <= 0 || !by_pid.contains_key(&window.pid) {
@@ -279,6 +303,20 @@ impl Applications {
     pub fn owns_window(&self, pid: i32) -> bool {
         self.owners.contains_key(&pid)
     }
+
+    /// The pid a process that owns a window is filed under, by the
+    /// application's name.
+    ///
+    /// The application view folds a whole program away under this pid, and it
+    /// has to be the one the window belongs to rather than any of the
+    /// program's helpers.
+    pub fn owner_of(&self, name: &str) -> Option<i32> {
+        self.owners
+            .iter()
+            .filter(|(_, (owned, _))| owned == name)
+            .map(|(pid, _)| *pid)
+            .min()
+    }
 }
 
 /// The lookup an application name comes from, which the desktop entry index
@@ -287,11 +325,19 @@ pub trait EntryLookup {
     /// The entry whose names include one of `classes`, or whose executable is
     /// `executable`.
     fn matching(&self, classes: &[String], executable: Option<&str>) -> Option<&Entry>;
+
+    /// The entry a program's executable name names, when no window class is
+    /// known.
+    fn by_exec_name(&self, executable: &str) -> Option<&Entry>;
 }
 
 impl EntryLookup for crate::desktop::Index {
     fn matching(&self, classes: &[String], executable: Option<&str>) -> Option<&Entry> {
         self.matching(classes, executable)
+    }
+
+    fn by_exec_name(&self, executable: &str) -> Option<&Entry> {
+        crate::desktop::Index::by_exec_name(self, executable)
     }
 }
 
@@ -487,8 +533,16 @@ pub fn applications(sample: &Sample, membership: &Applications, folded: &HashSet
                 busiest = *position;
             }
         }
-        let key = pids.first().copied().unwrap_or_default();
+        // The key an application is folded under is the process that owns its
+        // window, which is the one `Applications` filed it under; taking the
+        // smallest pid in the group would fold a group under a helper.
+        let key = membership
+            .owner_of(&name)
+            .unwrap_or_else(|| pids.first().copied().unwrap_or_default());
         let has_children = pids.len() > 1;
+        // Folded unless it was asked for. Every application starts closed,
+        // which is what makes this view a list of programs rather than a list
+        // of every helper they started.
         let open = !folded.contains(&key);
         rows.push(Row {
             pids: pids.clone(),
@@ -534,18 +588,34 @@ pub fn applications(sample: &Sample, membership: &Applications, folded: &HashSet
         }
     }
     // The processes that belong to no application keep their own names and
-    // are listed under the applications, in the order the tree gives them.
-    let tree_rows = tree(sample, membership, false, folded);
-    for row in tree_rows {
-        let pid = row.pids.first().copied().unwrap_or_default();
-        if membership.of(pid).is_some() {
-            continue;
-        }
+    // are listed after the applications. They are flat rows, not a subtree:
+    // this view is a list of programs, and nesting the ones nobody owns turned
+    // it into a tree that started expanded.
+    let mut loose: Vec<usize> = sample
+        .processes
+        .iter()
+        .enumerate()
+        .filter(|(_, process)| membership.of(process.pid).is_none())
+        .filter(|(_, process)| !process.is_kernel_thread())
+        .map(|(position, _)| position)
+        .collect();
+    loose.sort_unstable_by_key(|position| sample.processes[*position].pid);
+    for position in loose {
+        let process = &sample.processes[position];
+        let mut totals = Totals::default();
+        totals.add(process);
         rows.push(Row {
-            parent: None,
+            pids: vec![process.pid],
+            name: process.display_name().to_string(),
+            icon: None,
             depth: 0,
+            parent: None,
             is_application: false,
-            ..row
+            folded: false,
+            has_children: false,
+            is_user: !process.is_kernel_thread(),
+            totals,
+            main: position,
         });
     }
     rows
@@ -683,6 +753,10 @@ mod tests {
         fn matching(&self, _classes: &[String], _executable: Option<&str>) -> Option<&Entry> {
             None
         }
+
+        fn by_exec_name(&self, _executable: &str) -> Option<&Entry> {
+            None
+        }
     }
 
     fn window(pid: i32, class: &str) -> Window {
@@ -746,6 +820,53 @@ mod tests {
         let rows = tree_of(vec![process(1, 0, "init"), process(50, 49, "orphan")], &[]);
         assert_eq!(rows.len(), 2);
         assert!(rows.iter().all(|row| row.depth == 0));
+    }
+
+    #[test]
+    fn a_session_with_no_windows_still_reads_as_applications() {
+        // Wayland publishes no window-to-process mapping, so a sample from
+        // such a session has no windows in it. Every program would then be a
+        // bare executable with a placeholder icon; matching the executable
+        // against the desktop entries gives back the name and the icon.
+        let mut sample = sample(vec![
+            process(1, 0, "init"),
+            process(400, 1, "opencode"),
+            process(401, 400, "opencode helper"),
+        ]);
+        sample.processes[1].exe = Some("/usr/bin/opencode".to_string());
+        sample.processes[2].exe = Some("/usr/bin/opencode".to_string());
+        assert!(sample.windows.is_empty(), "a Wayland sample has no windows");
+
+        let entry = Entry {
+            name: "OpenCode".to_string(),
+            icon: "opencode".to_string(),
+            exec: "/usr/bin/opencode".to_string(),
+            ..Entry::default()
+        };
+        struct ByExec<'a>(&'a Entry);
+        impl EntryLookup for ByExec<'_> {
+            fn matching(&self, _classes: &[String], _executable: Option<&str>) -> Option<&Entry> {
+                None
+            }
+
+            fn by_exec_name(&self, executable: &str) -> Option<&Entry> {
+                (executable == "opencode").then_some(self.0)
+            }
+        }
+
+        let mut applications = Applications::new(&sample, &[], &ByExec(&entry));
+        applications.resolve(&sample);
+        let rows = applications_view(&sample, &applications, &[]);
+        let app = rows
+            .iter()
+            .find(|row| row.name == "OpenCode")
+            .expect("the program is named after its desktop entry");
+        assert_eq!(
+            app.icon.as_deref(),
+            Some("opencode"),
+            "and carries its icon"
+        );
+        assert_eq!(app.totals.count, 2, "its helper is counted with it");
     }
 
     #[test]

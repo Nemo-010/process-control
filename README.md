@@ -50,9 +50,15 @@ never waits on it.
 
 ## Platforms
 
-Linux only: it reads `/proc` and `/sys`, and asks the X display for the window
-each process owns. On a Wayland session it sees the Xwayland windows, which is
-every X11 program. It does not build for other systems.
+Linux only: it reads `/proc` and `/sys`, and asks the X display which window
+each process owns. It does not build for other systems.
+
+On an X11 session that is what groups processes into applications. A Wayland
+compositor does not tell any other program which process owns a window, so on
+a Wayland session there is nothing to ask: there, applications are recognised
+by the program each process runs, matched against the desktop entries. That
+gives the same names and icons; it is the window class that a Wayland session
+cannot supply.
 
 ## Install
 

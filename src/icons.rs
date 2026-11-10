@@ -516,6 +516,45 @@ mod tests {
     }
 
     #[test]
+    fn a_real_desktop_icon_is_found_and_decoded() {
+        // Whatever the machine has, take the first desktop entry that names an
+        // icon and follow it all the way to pixels. This is the path a row
+        // takes, and it must end in an image rather than a placeholder.
+        let index = crate::desktop::Index::load();
+        let mut tried = 0;
+        for entry in index.entries() {
+            if entry.icon.is_empty() || entry.icon.starts_with('/') {
+                continue;
+            }
+            tried += 1;
+            if tried > 8 {
+                break;
+            }
+            let path = find(&entry.icon);
+            println!(
+                "{}: icon {:?} -> {:?}",
+                entry.path.display(),
+                entry.icon,
+                path
+            );
+            if let Some(path) = path {
+                let image = decode(&path);
+                println!(
+                    "   decoded: {:?}",
+                    image.as_ref().map(|i| (i.size, i.rgba.len()))
+                );
+                assert!(image.is_some(), "{} did not decode", path.display());
+                return;
+            }
+        }
+        if tried == 0 {
+            // A machine with no desktop entries at all has nothing to test.
+            return;
+        }
+        panic!("none of {tried} desktop entries' icons could be found");
+    }
+
+    #[test]
     fn the_system_has_an_icon_theme_to_search() {
         // Whatever the test machine has, an icon name a desktop entry is
         // likely to use is either found or reported missing, never a panic.

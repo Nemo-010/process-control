@@ -338,7 +338,11 @@ holds the readers.
 
 `src/apps.rs` turns a `Sample` into the rows. A process belongs to an
 application when it, or an ancestor, owns a window: `_NET_WM_PID` says which
-process owns it and `WM_CLASS` says which program it is. `src/desktop.rs`
+process owns it and `WM_CLASS` says which program it is. A Wayland session
+publishes neither, to anyone but the compositor, so when the sample holds no
+windows at all `Applications::new` falls back to matching each process's
+executable against the desktop entries. That fallback is what gives a Wayland
+row its name and icon; do not remove it as dead code on a machine with X. `src/desktop.rs`
 indexes the desktop entries and matches `StartupWMClass` against
 both strings of `WM_CLASS`, so an application is recognised whatever packaged
 it. Nothing here consults Flatpak, Snap or systemd, and it must stay that way:

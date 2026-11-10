@@ -115,13 +115,40 @@ impl Index {
     /// the executable it runs.
     pub fn matching(&self, classes: &[String], executable: Option<&str>) -> Option<&Entry> {
         for class in classes {
-            if let Some(index) = self.by_class.get(&class.to_lowercase()) {
-                return self.entries.get(*index);
+            if let Some(entry) = self.by_class_name(class) {
+                return Some(entry);
             }
         }
-        let executable = executable?.to_lowercase();
+        let executable = executable?;
+        self.by_exec_name(executable)
+    }
+
+    /// The entry a window class, or a desktop entry id, names.
+    ///
+    /// The name is tried as it is and then without a `.desktop` suffix: a
+    /// Wayland application names itself after its entry id,
+    /// `al.opencode.desktop`, which would otherwise be looked for as a class
+    /// and never found, leaving the row with a placeholder icon.
+    pub fn by_class_name(&self, class: &str) -> Option<&Entry> {
+        let class = class.trim();
+        if class.is_empty() {
+            return None;
+        }
+        if let Some(index) = self.by_class.get(&class.to_lowercase()) {
+            return self.entries.get(*index);
+        }
+        let bare = class
+            .strip_suffix(".desktop")
+            .or_else(|| class.strip_suffix(".Desktop"))?;
+        self.by_class
+            .get(&bare.to_lowercase())
+            .and_then(|index| self.entries.get(*index))
+    }
+
+    /// The entry a program's executable name names.
+    pub fn by_exec_name(&self, executable: &str) -> Option<&Entry> {
         self.by_exec
-            .get(&executable)
+            .get(&executable.to_lowercase())
             .and_then(|index| self.entries.get(*index))
     }
 
